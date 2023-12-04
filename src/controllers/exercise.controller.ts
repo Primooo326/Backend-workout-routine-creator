@@ -27,16 +27,19 @@ export const readExercise = async (req: Request, res: Response) => {
 }
 
 export const readFilteredExercises = async (req: Request, res: Response) => {
-    const { force, level, mechanic, muscles, category, equipment } = req.body;
+    const { force, level, mechanic, muscles, category, equipment, page = 1 } = req.body;
+
+    const limit = 12; // Número de ejercicios por página
+    const offset = (page - 1) * limit; // Calcular el desplazamiento
 
     try {
         // Construir dinámicamente el objeto de condiciones
         const whereCondition:any = {};
-        if (force) whereCondition.force = force;
-        if (level) whereCondition.level = level;
-        if (mechanic) whereCondition.mechanic = mechanic;
-        if (equipment) whereCondition.equipment = equipment;
-        if (muscles) {
+        if (force && force.length) whereCondition.force = force;
+        if (level && level.length) whereCondition.level = level;
+        if (mechanic && mechanic.length) whereCondition.mechanic = mechanic;
+        if (equipment && equipment.length) whereCondition.equipment = equipment;
+        if (muscles && muscles.length) {
             // Usar JSON_CONTAINS para MySQL
             whereCondition[Op.or] = muscles.map((muscle:string) => ({
                 [Op.or]: [
@@ -45,10 +48,12 @@ export const readFilteredExercises = async (req: Request, res: Response) => {
                 ]
             }));
         }
-        if (category) whereCondition.category = category;
+        if (category && category.length) whereCondition.category = category;
 
         const exercises = await Exercise.findAll({
-            where: whereCondition
+            where: Object.keys(whereCondition).length ? whereCondition : undefined,
+            limit, // Limitar el número de resultados
+            offset // Desplazar los resultados según la página
         });
 
         res.status(200).json(exercises);
@@ -58,6 +63,7 @@ export const readFilteredExercises = async (req: Request, res: Response) => {
         res.status(500).json({ message: "Error", error });
     }
 };
+
 
 export const createExercise = async (req: Request, res: Response) => {
     try {
